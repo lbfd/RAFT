@@ -49,7 +49,9 @@ class RaftBridge:
         self.device = config['device']
         self.width  = config['width']
         self.height = config['height']
-        self.image2 = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+        self.flow_width  = config['image_width']//2
+        self.flow_height = config['image_height']//2
+        self.image2 = np.zeros((self.flow_height, self.flow_width, 3), dtype=np.uint8)
         self.image2 = torch.from_numpy(self.image2).permute(2, 0, 1).float()
         self.image2 = self.image2[None].to(self.device)
 
@@ -60,7 +62,7 @@ class RaftBridge:
         self.model.to(self.device)
         self.model.eval()
 
-        self.padder = InputPadder([self.width, self.height])
+        self.padder = InputPadder([self.flow_width, self.flow_height])
 
 
     def _initBridge(self, config):
@@ -133,7 +135,7 @@ class RaftBridge:
             img[:,:,1] = img_gray
             img[:,:,2] = img_gray
 
-        img = cv2.resize(img, (self.width, self.height))
+        img = cv2.resize(img, (self.flow_width, self.flow_height))
 
         # write into image2
         img = np.array(img.data, ndmin=3).astype(np.uint8)
@@ -162,10 +164,12 @@ class RaftBridge:
 
 
     def publish(self):
-        u = self.flow[:,:,0]
-        v = self.flow[:,:,1]
-        mag = np.sqrt(np.square(u) + np.square(v)) 
-        angle = np.arctan2(v,u) 
+        #  flow = np.zeros((self.height, self.width, 2), dtype=self.flow.dtype)
+        flow = cv2.resize(self.flow, (self.width, self.height))
+        u = flow[:,:,0]
+        v = flow[:,:,1]
+        mag = np.sqrt(np.square(u) + np.square(v))
+        angle = np.cos(np.arctan2(v,u))
 
         flow_out = np.stack((mag, angle), axis=-1)
         image_message = self.bridge.cv2_to_imgmsg(flow_out, encoding="passthrough")
