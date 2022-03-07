@@ -166,13 +166,8 @@ class RaftBridge:
     def publish(self):
         #  flow = np.zeros((self.height, self.width, 2), dtype=self.flow.dtype)
         flow = cv2.resize(self.flow, (self.width, self.height))
-        u = flow[:,:,0]
-        v = flow[:,:,1]
-        mag = np.sqrt(np.square(u) + np.square(v))
-        angle = np.cos(np.arctan2(v,u))
 
-        flow_out = np.stack((mag, angle), axis=-1)
-        image_message = self.bridge.cv2_to_imgmsg(flow_out, encoding="passthrough")
+        image_message = self.bridge.cv2_to_imgmsg(flow, encoding="passthrough")
         image_message.header.stamp = self.latest_update
         self.flow_pub.publish(image_message)
         
